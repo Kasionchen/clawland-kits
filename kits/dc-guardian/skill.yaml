@@ -1,0 +1,328 @@
+# PicoClaw Skill Configuration - DC Guardian
+# Data Center Night Shift Monitoring Kit
+# Version: 1.0.0
+
+skill:
+  name: "dc-guardian"
+  version: "1.0.0"
+  description: "Data center environmental monitoring - temperature, humidity, smoke, and water leak detection"
+  author: "Clawland Community"
+  license: "MIT"
+  tags:
+    - data-center
+    - monitoring
+    - temperature
+    - humidity
+    - smoke
+    - water-leak
+    - safety
+
+# Hardware Configuration
+hardware:
+  board: "licheerv-nano"
+  sensors:
+    - type: "dht22"
+      name: "temperature_humidity"
+      pin: 4
+      sampling_interval: 30  # seconds
+
+    - type: "mq2"
+      name: "smoke_gas"
+      digital_pin: 17
+      analog_pin: 18
+      sampling_interval: 5  # seconds
+
+    - type: "water_leak"
+      name: "water_detector"
+      pin: 27
+      sampling_interval: 2  # seconds
+
+# Monitoring Configuration
+monitoring:
+  mode: "continuous"  # continuous, scheduled, event-driven
+
+  # Normal monitoring cycle
+  normal_cycle:
+    interval: 30  # seconds between normal checks
+    sensors:
+      - "temperature_humidity"
+      - "smoke_gas"
+      - "water_detector"
+
+  # Intensive monitoring cycle (when anomalies detected)
+  intensive_cycle:
+    interval: 5  # seconds
+    trigger_on: "anomaly"
+    duration: 300  # 5 minutes
+
+# Thresholds and Alerts
+thresholds:
+  temperature:
+    unit: "celsius"
+    critical_high: 35  # °C - Critical overheat
+    warning_high: 30   # °C - Warning
+    warning_low: 18    # °C - Warning
+    critical_low: 15   # °C - Critical cold
+    hysteresis: 1      # °C
+
+  humidity:
+    unit: "percent"
+    critical_high: 80  # % - Critical high humidity
+    warning_high: 70   # % - Warning
+    warning_low: 30    # % - Warning
+    critical_low: 20   # % - Critical low humidity
+    hysteresis: 5      # %
+
+  smoke_gas:
+    unit: "ppm"
+    critical: 2000     # ppm - Fire/smoke emergency
+    warning: 1000      # ppm - Elevated levels
+    digital_trigger: true  # Also use digital output
+
+  water_leak:
+    unit: "boolean"
+    critical: true     # Any detection is critical
+    debounce_time: 0.5  # seconds
+
+# Alert Escalation Rules
+alerts:
+  # Notification channels
+  channels:
+    - type: "email"
+      enabled: true
+      recipients:
+        - "datacenter-ops@company.com"
+        - "facilities@company.com"
+
+    - type: "sms"
+      enabled: true
+      recipients:
+        - "+1-555-0100"  # On-call engineer
+        - "+1-555-0101"  # Backup engineer
+
+    - type: "webhook"
+      enabled: true
+      url: "https://alerts.company.com/webhook/dc-guardian"
+      method: "POST"
+      headers:
+        Authorization: "Bearer ${WEBHOOK_TOKEN}"
+
+    - type: "slack"
+      enabled: true
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      channel: "#datacenter-alerts"
+
+  # Escalation levels
+  escalation:
+    - level: 1  # Initial alert
+      delay: 0  # Immediate
+      channels:
+        - "email"
+        - "slack"
+
+    - level: 2  # No acknowledgment
+      delay: 300  # 5 minutes
+      channels:
+        - "sms"
+        - "email"
+        - "slack"
+
+    - level: 3  # Critical unacknowledged
+      delay: 600  # 10 minutes
+      channels:
+        - "sms"
+        - "email"
+        - "slack"
+        - "webhook"
+      escalate_to:
+        - "+1-555-0199"  # Manager
+
+  # Alert rules
+  rules:
+    - name: "temperature_critical_high"
+      condition: "temperature > thresholds.temperature.critical_high"
+      severity: "critical"
+      message: "🔥 CRITICAL: Data center overheating! Temperature: {temperature}°C"
+      cooldown: 300  # seconds before re-alerting
+
+    - name: "temperature_warning_high"
+      condition: "temperature > thresholds.temperature.warning_high"
+      severity: "warning"
+      message: "⚠️ WARNING: High temperature in data center. Temperature: {temperature}°C"
+      cooldown: 600
+
+    - name: "temperature_critical_low"
+      condition: "temperature < thresholds.temperature.critical_low"
+      severity: "critical"
+      message: "🥶 CRITICAL: Data center too cold! Temperature: {temperature}°C"
+      cooldown: 300
+
+    - name: "humidity_critical_high"
+      condition: "humidity > thresholds.humidity.critical_high"
+      severity: "critical"
+      message: "💧 CRITICAL: High humidity detected! Humidity: {humidity}%"
+      cooldown: 300
+
+    - name: "smoke_detected"
+      condition: "smoke_detected == true OR smoke_ppm > thresholds.smoke_gas.critical"
+      severity: "critical"
+      message: "🔥 EMERGENCY: Smoke or gas detected! Possible fire! PPM: {smoke_ppm}"
+      cooldown: 0  # Always alert immediately
+      actions:
+        - "trigger_fire_suppression_alert"
+        - "call_emergency_services"
+
+    - name: "water_leak_detected"
+      condition: "water_leak == true"
+      severity: "critical"
+      message: "💧 CRITICAL: Water leak detected in data center!"
+      cooldown: 60
+
+# AI Agent Configuration
+agent:
+  # Anomaly detection
+  anomaly_detection:
+    enabled: true
+    algorithm: "isolation_forest"  # isolation_forest, z_score, moving_average
+    training_period: 168  # hours (1 week)
+    sensitivity: "medium"  # low, medium, high
+
+  # Predictive alerts
+  prediction:
+    enabled: true
+    model: "linear_regression"
+    lookback_hours: 24
+    predict_hours: 2  # Predict 2 hours ahead
+    alert_threshold: 0.8  # 80% confidence
+
+  # Learning
+  learning:
+    enabled: true
+    update_interval: 86400  # seconds (daily)
+    learn_from:
+      - "historical_data"
+      - "operator_feedback"
+      - "false_positives"
+
+  # Autonomous actions
+  autonomy:
+    level: "supervised"  # full, supervised, manual
+    allowed_actions:
+      - "send_alerts"
+      - "adjust_thresholds"  # With approval
+      - "enter_intensive_mode"
+    prohibited_actions:
+      - "trigger_fire_suppression"
+      - "shutdown_equipment"
+
+# Data Management
+data:
+  # Local storage
+  storage:
+    path: "/var/lib/picclaw/dc-guardian"
+    retention_days: 365
+    format: "sqlite"
+
+  # Cloud sync (optional)
+  cloud_sync:
+    enabled: false
+    endpoint: "${MOLTCLAW_ENDPOINT}"
+    api_key: "${MOLTCLAW_API_KEY}"
+    sync_interval: 300  # seconds
+
+  # Export formats
+  export:
+    formats:
+      - "json"
+      - "csv"
+      - "prometheus"
+
+  # Backup
+  backup:
+    enabled: true
+    interval: 86400  # daily
+    retention_days: 30
+    location: "/backup/dc-guardian"
+
+# Reporting
+reporting:
+  # Daily report
+  daily:
+    enabled: true
+    time: "06:00"  # 6 AM
+    recipients:
+      - "datacenter-team@company.com"
+    include:
+      - "temperature_summary"
+      - "humidity_summary"
+      - "alert_history"
+      - "anomalies_detected"
+      - "sensor_health"
+
+  # Weekly report
+  weekly:
+    enabled: true
+    day: "monday"
+    time: "08:00"
+    recipients:
+      - "datacenter-team@company.com"
+      - "facilities@company.com"
+    include:
+      - "trend_analysis"
+      - "compliance_report"
+      - "recommendations"
+      - "roi_calculation"
+
+  # Monthly report
+  monthly:
+    enabled: true
+    day: 1
+    time: "09:00"
+    recipients:
+      - "management@company.com"
+    include:
+      - "executive_summary"
+      - "cost_savings"
+      - "uptime_statistics"
+      - "incidents_summary"
+
+# Maintenance
+maintenance:
+  # Self-test schedule
+  self_test:
+    enabled: true
+    interval: 86400  # daily
+    check_sensors: true
+    check_network: true
+    check_storage: true
+
+  # Sensor calibration reminders
+  calibration:
+    dht22:
+      interval_days: 90
+      reminder_days_before: 7
+
+    mq2:
+      interval_days: 180
+      reminder_days_before: 14
+
+    water_leak:
+      interval_days: 365
+      reminder_days_before: 30
+
+# Development and Debug
+debug:
+  enabled: false
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_file: "/var/log/picclaw/dc-guardian.log"
+  max_log_size_mb: 100
+  backup_count: 5
+
+  # Simulate mode (for testing)
+  simulate:
+    enabled: false
+    sensor_values:
+      temperature: 24.5
+      humidity: 45.0
+      smoke_ppm: 50
+      water_leak: false
