@@ -1,0 +1,401 @@
+# Alert Configuration - DC Guardian
+# Data Center Night Shift Monitoring Kit
+# Version: 1.0.0
+
+# Alert Levels and Severity
+alert_levels:
+  critical:
+    priority: 1
+    color: "red"
+    sound: "alarm_critical.wav"
+    icon: "🚨"
+    auto_escalate: true
+    response_time_minutes: 5
+
+  warning:
+    priority: 2
+    color: "orange"
+    sound: "alarm_warning.wav"
+    icon: "⚠️"
+    auto_escalate: true
+    response_time_minutes: 30
+
+  info:
+    priority: 3
+    color: "blue"
+    sound: null
+    icon: "ℹ️"
+    auto_escalate: false
+    response_time_minutes: 60
+
+# Alert Templates
+templates:
+  # Temperature Alerts
+  temperature_critical_high:
+    level: "critical"
+    title: "🔥 CRITICAL: Data Center Overheating"
+    message: |
+      Temperature has exceeded critical threshold!
+
+      Current: {temperature}°C
+      Threshold: {threshold}°C
+      Location: {location}
+      Time: {timestamp}
+
+      IMMEDIATE ACTION REQUIRED:
+      1. Check HVAC system status
+      2. Verify cooling equipment operation
+      3. Check for airflow obstructions
+      4. Consider emergency equipment shutdown if temperature continues rising
+
+    actions:
+      - label: "Acknowledge Alert"
+        type: "acknowledge"
+      - label: "View Dashboard"
+        type: "link"
+        url: "/dashboard/dc-guardian"
+      - label: "Call On-Call Engineer"
+        type: "call"
+        number: "+1-555-0100"
+
+  temperature_warning_high:
+    level: "warning"
+    title: "⚠️ WARNING: Elevated Temperature"
+    message: |
+      Temperature is above normal operating range.
+
+      Current: {temperature}°C
+      Threshold: {threshold}°C
+      Location: {location}
+      Time: {timestamp}
+
+      Recommended Actions:
+      1. Monitor temperature trend
+      2. Check HVAC efficiency
+      3. Review recent equipment additions
+
+    actions:
+      - label: "Monitor"
+        type: "acknowledge"
+      - label: "View Trend"
+        type: "link"
+        url: "/dashboard/dc-guardian/trends"
+
+  temperature_critical_low:
+    level: "critical"
+    title: "🥶 CRITICAL: Data Center Too Cold"
+    message: |
+      Temperature has dropped below critical threshold!
+
+      Current: {temperature}°C
+      Threshold: {threshold}°C
+      Location: {location}
+      Time: {timestamp}
+
+      WARNING: Low temperatures can cause:
+      - Condensation on equipment
+      - Static electricity buildup
+      - Equipment malfunction
+
+      IMMEDIATE ACTION REQUIRED:
+      1. Check heating system
+      2. Verify HVAC settings
+      3. Check for cold air infiltration
+
+    actions:
+      - label: "Acknowledge"
+        type: "acknowledge"
+
+  # Humidity Alerts
+  humidity_critical_high:
+    level: "critical"
+    title: "💧 CRITICAL: High Humidity Detected"
+    message: |
+      Humidity has exceeded critical threshold!
+
+      Current: {humidity}%
+      Threshold: {threshold}%
+      Location: {location}
+      Time: {timestamp}
+
+      WARNING: High humidity can cause:
+      - Equipment corrosion
+      - Short circuits
+      - Mold growth
+
+      IMMEDIATE ACTION REQUIRED:
+      1. Check dehumidification system
+      2. Look for water intrusion
+      3. Verify HVAC operation
+
+    actions:
+      - label: "Acknowledge"
+        type: "acknowledge"
+
+  humidity_warning_low:
+    level: "warning"
+    title: "⚠️ WARNING: Low Humidity"
+    message: |
+      Humidity is below recommended range.
+
+      Current: {humidity}%
+      Threshold: {threshold}%
+
+      Low humidity increases static electricity risk.
+      Consider adding humidification.
+
+    actions:
+      - label: "Acknowledge"
+        type: "acknowledge"
+
+  # Smoke/Gas Alerts
+  smoke_detected:
+    level: "critical"
+    title: "🔥 EMERGENCY: Smoke or Gas Detected"
+    message: |
+      ⚠️ POTENTIAL FIRE OR GAS LEAK DETECTED ⚠️
+
+      Sensor: {sensor_name}
+      PPM Reading: {smoke_ppm}
+      Location: {location}
+      Time: {timestamp}
+
+      THIS IS AN EMERGENCY - TAKE IMMEDIATE ACTION:
+
+      1. EVACUATE THE AREA if safe to do so
+      2. Call emergency services: 911
+      3. Do NOT enter if smoke is visible
+      4. Activate fire suppression if trained and safe
+      5. Meet at designated assembly point
+
+      DO NOT:
+      - Ignore this alert
+      - Delay evacuation
+      - Use elevators
+
+    actions:
+      - label: "🚨 CALL 911"
+        type: "call"
+        number: "911"
+      - label: "Acknowledge & Respond"
+        type: "acknowledge"
+      - label: "View Camera Feed"
+        type: "link"
+        url: "/cameras/datacenter"
+
+    auto_actions:
+      - type: "call"
+        numbers:
+          - "+1-555-0100"
+          - "+1-555-0101"
+      - type: "webhook"
+        url: "${EMERGENCY_WEBHOOK_URL}"
+        payload:
+          event: "fire_alarm"
+          location: "{location}"
+
+  gas_detected:
+    level: "critical"
+    title: "⚠️ CRITICAL: Gas Leak Detected"
+    message: |
+      Elevated gas levels detected!
+
+      Gas Type: {gas_type}
+      PPM: {ppm}
+      Threshold: {threshold} ppm
+      Location: {location}
+
+      IMMEDIATE ACTIONS:
+      1. Ventilate area if safe
+      2. Check for gas leaks
+      3. Evacuate if levels high
+
+    actions:
+      - label: "Acknowledge"
+        type: "acknowledge"
+
+  # Water Leak Alerts
+  water_leak_detected:
+    level: "critical"
+    title: "💧 CRITICAL: Water Leak Detected"
+    message: |
+      Water leak detected in data center!
+
+      Location: {location}
+      Time: {timestamp}
+      Sensor: {sensor_name}
+
+      IMMEDIATE ACTION REQUIRED:
+      1. Locate water source (pipe leak, AC drip, roof leak)
+      2. Place water barriers to protect equipment
+      3. Turn off water supply if applicable
+      4. Contact facilities team
+
+      WARNING: Water and electricity are a dangerous combination.
+      Do not touch wet equipment or standing water.
+
+    actions:
+      - label: "Call Facilities"
+        type: "call"
+        number: "+1-555-0200"
+      - label: "Acknowledge"
+        type: "acknowledge"
+      - label: "View Layout"
+        type: "link"
+        url: "/floorplan/datacenter"
+
+  # Sensor Health Alerts
+  sensor_offline:
+    level: "warning"
+    title: "⚠️ WARNING: Sensor Offline"
+    message: |
+      Sensor has stopped responding.
+
+      Sensor: {sensor_name}
+      Type: {sensor_type}
+      Last Reading: {last_reading}
+      Time: {timestamp}
+
+      Actions:
+      1. Check sensor power
+      2. Check network connectivity
+      3. Inspect for physical damage
+
+    actions:
+      - label: "Troubleshoot"
+        type: "link"
+        url: "/diagnostics/{sensor_name}"
+
+  sensor_malfunction:
+    level: "warning"
+    title: "⚠️ WARNING: Sensor Malfunction"
+    message: |
+      Sensor reporting abnormal readings.
+
+      Sensor: {sensor_name}
+      Error: {error_message}
+      Last Valid Reading: {last_valid}
+
+      Sensor may need calibration or replacement.
+
+    actions:
+      - label: "Run Diagnostics"
+        type: "command"
+        command: "picclaw sensor test {sensor_name}"
+
+# Notification Groups
+notification_groups:
+  operations_team:
+    name: "Data Center Operations"
+    members:
+      - name: "On-Call Engineer"
+        email: "oncall@company.com"
+        phone: "+1-555-0100"
+        slack: "@oncall"
+        roles: ["primary", "level1"]
+
+      - name: "Backup Engineer"
+        email: "backup@company.com"
+        phone: "+1-555-0101"
+        slack: "@backup"
+        roles: ["secondary", "level1"]
+
+  facilities_team:
+    name: "Facilities Management"
+    members:
+      - name: "Facilities Manager"
+        email: "facilities@company.com"
+        phone: "+1-555-0200"
+        roles: ["facilities", "level2"]
+
+  management:
+    name: "Management"
+    members:
+      - name: "IT Director"
+        email: "it-director@company.com"
+        roles: ["management", "level3"]
+
+# Quiet Hours
+quiet_hours:
+  enabled: false
+  # During quiet hours, only critical alerts make sound
+  # All alerts are still logged and sent via email
+  schedule:
+    weekdays:
+      start: "22:00"
+      end: "06:00"
+    weekends:
+      start: "18:00"
+      end: "08:00"
+  exceptions:
+    - level: "critical"  # Always alert for critical
+    - type: "smoke_detected"
+    - type: "water_leak_detected"
+
+# Alert Batching
+batching:
+  enabled: true
+  # Batch similar alerts within time window
+  window_seconds: 60
+  max_alerts_per_batch: 10
+  batch_template: |
+    {count} alerts in the last {window} seconds:
+
+    {alert_summary}
+
+    View details: {dashboard_url}
+
+# Acknowledgment Tracking
+acknowledgment:
+  # Auto-escalate if not acknowledged
+  auto_escalate:
+    enabled: true
+    intervals:
+      critical: 300    # 5 minutes
+      warning: 1800    # 30 minutes
+      info: 3600       # 60 minutes
+
+  # Require acknowledgment from specific roles
+  role_requirements:
+    critical: ["level1", "level2"]
+    warning: ["level1"]
+    info: []
+
+  # Track acknowledgment statistics
+  tracking:
+    enabled: true
+    metrics:
+      - "response_time"
+      - "acknowledgment_rate"
+      - "false_positive_rate"
+
+# Integration Webhooks
+integrations:
+  pagerduty:
+    enabled: false
+    service_key: "${PAGERDUTY_KEY}"
+    severity_mapping:
+      critical: "P1"
+      warning: "P2"
+      info: "P3"
+
+  opsgenie:
+    enabled: false
+    api_key: "${OPSGENIE_KEY}"
+    team: "datacenter-ops"
+
+  servicenow:
+    enabled: false
+    instance: "company.service-now.com"
+    create_incidents: true
+    incident_template: "datacenter_alert"
+
+# Historical Tracking
+history:
+  retention_days: 90
+  storage: "/var/lib/picclaw/dc-guardian/alerts.db"
+
+  # Generate reports
+  reports:
+    weekly_summary: true
+    monthly_trends: true
