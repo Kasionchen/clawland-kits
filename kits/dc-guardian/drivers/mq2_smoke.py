@@ -71,7 +71,7 @@ class MQ2Sensor:
         Returns:
             True if gas detected (concentration > threshold)
         """
-        return GPIO.input(self.digital_pin) == GPIO.HIGH
+        return GPIO.input(self.digital_pin) == GPIO.LOW
 
     def read_analog(self) -> Optional[int]:
         """
@@ -85,8 +85,12 @@ class MQ2Sensor:
 
         try:
             # MCP3008 ADC read
-            adc_channel = self.analog_pin  # Assuming direct mapping
-            if adc_channel < 0 or adc_channel > 7:
+            # Backward compatibility: previous docs/config used GPIO18 for CH0.
+            if 0 <= self.analog_pin <= 7:
+                adc_channel = self.analog_pin
+            elif self.analog_pin == 18:
+                adc_channel = 0
+            else:
                 return None
 
             # SPI transaction
@@ -274,17 +278,19 @@ if __name__ == "__main__":
 
             while True:
                 status = sensor.get_status()
+                ppm_display = f"{status['ppm']:.1f}" if status['ppm'] is not None else "N/A"
                 print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] "
                       f"Gas: {'DETECTED' if status['gas_detected'] else 'CLEAR'} "
-                      f"PPM: {status['ppm']:.1f if status['ppm'] else 'N/A'} "
+                      f"PPM: {ppm_display} "
                       f"Alert: {'⚠️ YES' if status['alert'] else '✓ NO'}")
                 time.sleep(args.interval)
 
         else:
             status = sensor.get_status()
+            ppm_display = f"{status['ppm']:.1f}" if status['ppm'] is not None else "N/A"
             print("MQ-2 Sensor Status:")
             print(f"  Gas Detected: {'YES ⚠️' if status['gas_detected'] else 'NO ✓'}")
-            print(f"  PPM: {status['ppm']:.1f if status['ppm'] else 'N/A'}")
+            print(f"  PPM: {ppm_display}")
             print(f"  Threshold: {status['threshold_ppm']} PPM")
             print(f"  Alert: {'YES ⚠️' if status['alert'] else 'NO ✓'}")
             if status['possible_gases']:
