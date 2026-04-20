@@ -1,0 +1,151 @@
+# PicoClaw Skill Configuration - DC Guardian
+
+PicoClaw configuration for data center night shift monitoring.
+
+## Skill Metadata
+
+```yaml
+skill:
+  name: dc-guardian
+  version: 1.0.0
+  description: Data center monitoring kit - temperature, humidity, smoke, water leak
+  author: Clawland-AI
+  license: CERN-OHL-S-2.0
+  tags:
+    - monitoring
+    - data-center
+    - iot
+    - sensors
+
+hardware:
+  board: LicheeRV-Nano
+  soc: TH1520
+  pins:
+    dht22: GP10
+    mq2_adc: GP26
+    water_leak: GP11
+    status_led: GP17
+
+runtime:
+  interval: 60  # seconds between readings
+  alert_cooldown: 300  # seconds before re-alerting same condition
+```
+
+## Sensors Configuration
+
+```yaml
+sensors:
+  - name: temperature
+    driver: dht22
+    unit: celsius
+    thresholds:
+      min: 15
+      max: 30
+      critical: 35
+      
+  - name: humidity
+    driver: dht22
+    unit: percent
+    thresholds:
+      max: 70
+      critical: 85
+      
+  - name: smoke
+    driver: mq2
+    unit: ppm
+    thresholds:
+      warning: 100
+      critical: 300
+      
+  - name: water_leak
+    driver: water_leak
+    unit: boolean
+    thresholds:
+      alert_on: true
+```
+
+## Alert Configuration
+
+```yaml
+alerts:
+  - name: high_temperature
+    condition: temperature > 30
+    severity: warning
+    actions:
+      - log
+      - webhook
+      
+  - name: critical_temperature
+    condition: temperature > 35
+    severity: critical
+    actions:
+      - log
+      - webhook
+      - sms
+      
+  - name: smoke_detected
+    condition: smoke > 100
+    severity: critical
+    actions:
+      - log
+      - webhook
+      - sms
+      - alarm
+      
+  - name: water_leak_detected
+    condition: water_leak == true
+    severity: critical
+    actions:
+      - log
+      - webhook
+      - sms
+```
+
+## Webhook Payload
+
+```yaml
+webhook:
+  url: ${WEBHOOK_URL}
+  method: POST
+  headers:
+    Content-Type: application/json
+    Authorization: Bearer ${WEBHOOK_TOKEN}
+  payload_template: |
+    {
+      "kit": "dc-guardian",
+      "alert": "{{alert_name}}",
+      "severity": "{{severity}}",
+      "timestamp": "{{timestamp}}",
+      "location": "{{location}}",
+      "readings": {
+        "temperature": {{temperature}},
+        "humidity": {{humidity}},
+        "smoke": {{smoke}},
+        "water_leak": {{water_leak}}
+      }
+    }
+```
+
+## Installation
+
+```bash
+# Install skill
+picclaw skill install dc-guardian
+
+# Configure webhook URL
+export WEBHOOK_URL=https://your-webhook-endpoint.com/alerts
+export WEBHOOK_TOKEN=your-secret-token
+
+# Start monitoring
+picclaw start dc-guardian
+```
+
+## Status LED Patterns
+
+| Pattern | Meaning |
+|---------|---------|
+| Solid Green | All sensors normal |
+| Solid Yellow | Warning condition |
+| Solid Red | Critical alert |
+| Blinking Green | Sensor reading in progress |
+| Blinking Red | Sensor error |
