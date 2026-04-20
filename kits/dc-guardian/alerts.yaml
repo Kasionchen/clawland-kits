@@ -1,0 +1,123 @@
+# Alert Configuration - DC Guardian
+
+Alert thresholds and escalation rules for data center monitoring.
+
+## Alert Thresholds
+
+```yaml
+thresholds:
+  temperature:
+    unit: celsius
+    warning: 30
+    critical: 35
+    min_normal: 15
+    
+  humidity:
+    unit: percent
+    warning: 70
+    critical: 85
+    
+  smoke:
+    unit: ppm
+    warning: 100
+    critical: 300
+    
+  water_leak:
+    unit: boolean
+    alert_on_true: true
+```
+
+## Escalation Rules
+
+```yaml
+escalation:
+  - level: 1
+    name: Warning
+    triggers:
+      - temperature > 30 and temperature <= 35
+      - humidity > 70 and humidity <= 85
+      - smoke > 100 and smoke <= 300
+    actions:
+      - log: "warning"
+      - webhook: "warning"
+      - status_led: "yellow"
+    repeat_interval: 3600  # 1 hour
+    
+  - level: 2
+    name: Critical
+    triggers:
+      - temperature > 35
+      - humidity > 85
+      - smoke > 300
+      - water_leak == true
+    actions:
+      - log: "critical"
+      - webhook: "critical"
+      - sms: "critical"
+      - status_led: "red"
+      - alarm: "on"
+    repeat_interval: 300  # 5 minutes
+```
+
+## Webhook Integration
+
+```yaml
+webhook:
+  enabled: true
+  url: ${WEBHOOK_URL}
+  retry_count: 3
+  retry_delay: 5  # seconds
+  
+sms:
+  enabled: false
+  provider: twilio
+  # Configure in environment variables
+  
+notification:
+  email:
+    enabled: false
+    recipients:
+      - ops-team@example.com
+```
+
+## Alert Messages
+
+```yaml
+messages:
+  high_temperature: |
+    🔶 WARNING: High temperature detected in Data Center
+    Location: {location}
+    Temperature: {temperature}°C
+    Humidity: {humidity}%
+    Time: {timestamp}
+    
+  critical_temperature: |
+    🚨 CRITICAL: Temperature exceeds safe limits!
+    Location: {location}
+    Temperature: {temperature}°C
+    Immediate action required!
+    Time: {timestamp}
+    
+  smoke_detected: |
+    🚨 SMOKE DETECTED!
+    Location: {location}
+    Smoke Level: {smoke} ppm
+    Evacuate immediately if necessary!
+    Time: {timestamp}
+    
+  water_leak: |
+    💧 WATER LEAK DETECTED!
+    Location: {location}
+    Possible flooding source.
+    Check floor sensors immediately!
+    Time: {timestamp}
+```
+
+## Data Retention
+
+```yaml
+data:
+  retention_days: 90
+  archive_enabled: true
+  archive_destination: s3://clawland-data/dc-guardian/
+```
